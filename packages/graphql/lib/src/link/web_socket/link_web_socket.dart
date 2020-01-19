@@ -5,6 +5,7 @@ import 'package:graphql/src/link/link.dart';
 import 'package:graphql/src/link/operation.dart';
 import 'package:graphql/src/socket_client.dart';
 import 'package:graphql/src/websocket/messages.dart';
+import 'package:rxdart/subjects.dart';
 
 /// A Universal Websocket [Link] implementation to support the websocket transport.
 /// It supports subscriptions, query and mutation operations as well.
@@ -22,6 +23,9 @@ class WebSocketLink extends Link {
 
   final String url;
   final SocketClientConfig config;
+  final BehaviorSubject<SocketConnectionState> connectionState =
+      BehaviorSubject<SocketConnectionState>.seeded(
+          SocketConnectionState.NOT_CONNECTED);
 
   // cannot be final because we're changing the instance upon a header change.
   SocketClient _socketClient;
@@ -44,6 +48,11 @@ class WebSocketLink extends Link {
   void connectOrReconnect() {
     _socketClient?.dispose();
     _socketClient = SocketClient(url, config: config);
+
+    // Start monitoring the socket state. Note: We cannot use pipe as the pipe breaks on disconnect & connect
+    //_socketClient.connectionState.pipe(connectionState);
+    _socketClient.connectionState
+        .listen((final SocketConnectionState s) => connectionState.add(s));
   }
 
   /// Disposes the underlying socket client explicitly. Only use this, if you want to disconnect from
@@ -51,5 +60,6 @@ class WebSocketLink extends Link {
   Future<void> dispose() async {
     await _socketClient?.dispose();
     _socketClient = null;
+    connectionState.close();
   }
 }

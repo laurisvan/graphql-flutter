@@ -195,6 +195,7 @@ class SocketClient {
   Future<void> dispose() async {
     print('Disposing socket client..');
     _reconnectTimer?.cancel();
+    _connectionStateController.add(SocketConnectionState.NOT_CONNECTED);
     await Future.wait([
       _socket?.close(),
       _keepAliveSubscription?.cancel(),
